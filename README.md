@@ -2,7 +2,6 @@
 
 A desktop word processor that transcribes speech to text in real time using [OpenAI Whisper](https://huggingface.co/openai/whisper-small) (whisper-small) running locally via Hugging Face Transformers.
 
-![dark teal UI with recording toggle and text editor]
 
 ## Features
 
