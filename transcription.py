@@ -12,7 +12,8 @@ class Transcriber:
 
     def transcribe(self, audio: np.ndarray) -> str:
         self._ensure_loaded()
-        result = self._pipe({"array": audio, "sampling_rate": SAMPLE_RATE})
+        attention_mask = np.ones(len(audio), dtype=np.int32)
+        result = self._pipe({"array": audio, "sampling_rate": SAMPLE_RATE, "attention_mask": attention_mask})
         return result["text"].strip()
 
     def _ensure_loaded(self) -> None:
