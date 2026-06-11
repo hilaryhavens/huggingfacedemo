@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__hf-mcp-server__hub_repo_search",
+      "PowerShell(New-Item *)",
+      "Bash(python *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
