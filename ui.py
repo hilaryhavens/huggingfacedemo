@@ -29,6 +29,7 @@ class VoiceWordProcessor:
         self._transcriber = Transcriber()
         self._recording = False
         self._has_unsaved = False
+        self._chunk_timer_id: str | None = None
 
         self._build_menu()
         self._build_editor()
@@ -142,8 +143,38 @@ class VoiceWordProcessor:
         self._recording = True
         self._record_btn.config(text="⏹  Stop Recording", bg=COLORS["recording"])
         self._status_label.config(text="Status: Recording...")
+        self._schedule_chunk()
+
+    def _schedule_chunk(self) -> None:
+        self._chunk_timer_id = self.root.after(3000, self._chunk_transcribe)
+
+    def _chunk_transcribe(self) -> None:
+        audio = self._recorder.drain()
+        if audio is not None:
+            thread = threading.Thread(
+                target=self._chunk_worker, args=(audio,), daemon=True
+            )
+            thread.start()
+        if self._recording:
+            self._schedule_chunk()
+
+    def _chunk_worker(self, audio: np.ndarray) -> None:
+        try:
+            loading = self._transcriber._pipe is None
+            if loading:
+                self.root.after(0, lambda: self._status_label.config(text="Status: Loading model..."))
+            text = self._transcriber.transcribe(audio)
+            if loading:
+                self.root.after(0, lambda: self._status_label.config(text="Status: Recording..."))
+            if text:
+                self.root.after(0, lambda t=text: self._append_text(t))
+        except Exception:
+            pass
 
     def _stop_recording(self) -> None:
+        if self._chunk_timer_id is not None:
+            self.root.after_cancel(self._chunk_timer_id)
+            self._chunk_timer_id = None
         self._recording = False
         self._record_btn.config(
             text="🎙  Start Recording",

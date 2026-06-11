@@ -1,3 +1,4 @@
+import threading
 import numpy as np
 import sounddevice as sd
 
@@ -10,6 +11,7 @@ class AudioRecorder:
         self.sample_rate = sample_rate
         self._frames: list[np.ndarray] = []
         self._stream: sd.InputStream | None = None
+        self._lock = threading.Lock()
 
     def start(self) -> None:
         self._frames = []
@@ -22,16 +24,29 @@ class AudioRecorder:
         self._stream.start()
 
     def _callback(self, indata: np.ndarray, frames: int, time, status) -> None:
-        self._frames.append(indata.copy())
+        with self._lock:
+            self._frames.append(indata.copy())
+
+    def drain(self) -> np.ndarray | None:
+        with self._lock:
+            frames, self._frames = self._frames, []
+        if not frames:
+            return None
+        audio = np.concatenate(frames, axis=0).flatten()
+        if len(audio) < MIN_DURATION_SAMPLES:
+            return None
+        return audio
 
     def stop(self) -> np.ndarray | None:
         if self._stream is not None:
             self._stream.stop()
             self._stream.close()
             self._stream = None
-        if not self._frames:
+        with self._lock:
+            frames, self._frames = self._frames, []
+        if not frames:
             return None
-        audio = np.concatenate(self._frames, axis=0).flatten()
+        audio = np.concatenate(frames, axis=0).flatten()
         if len(audio) < MIN_DURATION_SAMPLES:
             return None
         return audio
